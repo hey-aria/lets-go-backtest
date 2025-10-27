@@ -3,7 +3,9 @@ package main
 import (
 	"embed"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/wailsapp/wails/v2"
@@ -39,7 +41,13 @@ func main() {
 }
 
 func startGinServer() {
+	// create web server
 	r := gin.Default()
+
+	// create /tmp dir for handling any temporary files
+	if _, err := os.Stat("./tmp"); os.IsNotExist(err) {
+		os.Mkdir("./tmp", 0700)
+	}
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -48,12 +56,26 @@ func startGinServer() {
 	})
 
 	r.POST("/upload", func(c *gin.Context) {
-		file, err := c.FormFile("file")
+		file, header, err := c.Request.FormFile("data")
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read file"})
 			return
 		}
-		fmt.Print(file)
+
+		out, err := os.Create("./tmp/upload~" + header.Filename)
+		fmt.Println(err)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to write temp file"})
+			return
+		}
+		defer out.Close()
+		_, err = io.Copy(out, file)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to write csv to temp file"})
+			return
+		}
+		fmt.Println(err)
+
 		c.Status(http.StatusOK)
 	})
 

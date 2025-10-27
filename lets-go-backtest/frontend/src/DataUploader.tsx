@@ -8,7 +8,7 @@ export default function DataUploader(props: any) {
     const [csv, setCsv] = useState<Blob>();
     const formData = new FormData();
     if (csv) {
-        formData.append('file', csv);
+        formData.append('data', csv);
     }
 
     function handleChange(e: any) {
