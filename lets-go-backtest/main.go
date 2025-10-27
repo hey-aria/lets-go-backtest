@@ -2,7 +2,10 @@ package main
 
 import (
 	"embed"
+	"fmt"
+	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -12,6 +15,7 @@ import (
 var assets embed.FS
 
 func main() {
+	go startGinServer()
 	// Create an instance of the app structure
 	app := NewApp()
 
@@ -29,8 +33,29 @@ func main() {
 			app,
 		},
 	})
-
 	if err != nil {
 		println("Error:", err.Error())
 	}
+}
+
+func startGinServer() {
+	r := gin.Default()
+
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "pong",
+		})
+	})
+
+	r.POST("/upload", func(c *gin.Context) {
+		file, err := c.FormFile("file")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read file"})
+			return
+		}
+		fmt.Print(file)
+		c.Status(http.StatusOK)
+	})
+
+	r.Run(":8080")
 }
